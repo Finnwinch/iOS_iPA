@@ -15,7 +15,6 @@ jobs:
           channel: 'stable'
           architecture: x64
       - run: flutter pub get
-      
 
       - run: pod repo update
         working-directory: ios
@@ -32,11 +31,49 @@ jobs:
         run: zip -qq -r -9 FlutterIpaExport.ipa Payload
         working-directory: build/ios/iphoneos
 
+      # Charger la version depuis le fichier .env
+      - name: Load version from .env
+        run: |
+          echo "Loading .env file..."
+          source .env
+          echo "Current version: $VERSION"
+
+          # Incrémenter la version (Patch par défaut)
+          IFS='.' read -r -a parts <<< "$VERSION"
+          major=${parts[0]}
+          minor=${parts[1]}
+          patch=${parts[2]}
+          
+          # Incrémentation du patch
+          patch=$((patch + 1))
+          NEW_VERSION="$major.$minor.$patch"
+
+          echo "New version: $NEW_VERSION"
+          
+          # Écrire la nouvelle version dans le .env
+          echo "VERSION=$NEW_VERSION" > .env
+
+          # Exposer la nouvelle version pour les étapes suivantes
+          echo "tag=$NEW_VERSION" >> $GITHUB_ENV
+
+      - name: Commit and push new version
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add .env
+          git commit -m "Bump version to ${{ env.tag }}"
+          git push
+
+      - name: Create new tag
+        run: |
+          git tag "v${{ env.tag }}"
+          git push origin "v${{ env.tag }}"
+
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: build/ios/iphoneos/FlutterIpaExport.ipa
-          tag: v1.0
+          tag: "v${{ env.tag }}"
           overwrite: true
-          body: "This is first release"
+          body: "Release v${{ env.tag }}"
