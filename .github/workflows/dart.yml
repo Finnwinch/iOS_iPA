@@ -45,7 +45,6 @@ jobs:
           patch=${parts[2]}
           
           # Incrémentation du patch
-          patch=$((patch + 1))
           NEW_VERSION="$major.$minor.$patch"
 
           echo "New version: $NEW_VERSION"
